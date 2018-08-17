@@ -78,7 +78,7 @@
 	// to reply to this ticket
 	var/clickedId = 0
 	var/datum/admin_ticket/wasAlreadyClicked = null
-	for(var/datum/admin_ticket/T in tickets_list)
+	for(var/datum/admin_ticket/T in admin_tickets_list)
 		if(!T.resolved && T.pm_started_user && compare_ckey(T.owner, C.mob) && !compare_ckey(T.handling_admin, src))
 			if(T.pm_started_flag)
 				clickedId = T.ticket_id
@@ -118,7 +118,7 @@
 	var/has_resolved_ticket = 0
 
 	// Search current tickets, is this user the owner or primary admin of a ticket
-	for(var/datum/admin_ticket/T in tickets_list)
+	for(var/datum/admin_ticket/T in admin_tickets_list)
 		if((!T.handling_admin && compare_ckey(T.owner, C)) || ((compare_ckey(T.owner, get_client(src)) || compare_ckey(T.handling_admin, get_client(src))) && (compare_ckey(T.owner, C) || compare_ckey(T.handling_admin, C))))
 			// Hijack this PM!
 			if(T.resolved && !holder)
@@ -162,7 +162,7 @@
 	// If we didn't find a ticket, we should make one. This bypasses the rest of the original PM system
 	var/datum/admin_ticket/T = new /datum/admin_ticket(src, msg, C)
 	if(!T.error)
-		tickets_list.Add(T)
+		admin_tickets_list.Add(T)
 	else
 		T = null
 

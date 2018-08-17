@@ -122,9 +122,20 @@ var/datum/subsystem/ticker/ticker
 				toggle_ooc(1) // Turn it on
 				declare_completion(force_ending)
 				spawn(50)
+<<<<<<< Updated upstream
 					var/admins_online = total_admins_active()
 					var/unresolved_tickets = total_unresolved_tickets()
 
+=======
+					var/unresolved_tickets = 0
+					var/admins_online = 0
+					var/unresolved_tickets_ending = 0 //this is so we can avoid having a normal round ended reboot message as well
+					for(var/datum/admin_ticket/T in admin_tickets_list)
+						if(!T.resolved)
+							unresolved_tickets++
+					for(var/client/X in admins)
+						admins_online++
+>>>>>>> Stashed changes
 					if(unresolved_tickets && admins_online)
 						ticker.delay_end = 1
 						message_admins("Not all tickets have been resolved. Server restart delayed.")

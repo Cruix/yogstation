@@ -21,7 +21,9 @@ var/list/admin_verbs_default = list(
 	/client/proc/reestablish_db_connection,/*reattempt a connection to the database*/
 	/client/proc/cmd_admin_pm_context,	/*right-click adminPM interface*/
 	/client/proc/cmd_admin_pm_panel,		/*admin-pm list*/
-	/client/proc/view_tickets,
+	/client/proc/view_admin_tickets,
+	/client/proc/view_all_tickets,
+	/client/proc/view_mentor_tickets,
 	/client/proc/toggleticketlistenall,
 	/client/proc/reload_donators,
 	/client/proc/user_stats,
@@ -248,15 +250,24 @@ var/list/admin_verbs_hideable = list(
 	/datum/admins/proc/toggle_ticket_counter_visibility
 	)
 
+var/list/mentor_verbs_default = list(
+	/client/proc/view_mentor_tickets,
+	)
+
 /client/proc/add_admin_verbs()
 	if(holder)
 		control_freak = CONTROL_FREAK_SKIN | CONTROL_FREAK_MACROS
 
 		var/rights = holder.rank.rights
+<<<<<<< Updated upstream
 		verbs += admin_verbs_default
 		#ifdef CYBERMEN_DEBUG
 		verbs += cybermen_debug_abilities
 		#endif
+=======
+		if(rights != R_MENTOR)
+			verbs += admin_verbs_default
+>>>>>>> Stashed changes
 		if(rights & R_BUILDMODE)	verbs += /client/proc/togglebuildmodeself
 		if(rights & R_ADMIN)		verbs += admin_verbs_admin
 		if(rights & R_BAN)			verbs += admin_verbs_ban
@@ -269,6 +280,7 @@ var/list/admin_verbs_hideable = list(
 		if(rights & R_REJUVINATE)	verbs += admin_verbs_rejuv
 		if(rights & R_SOUNDS)		verbs += admin_verbs_sounds
 		if(rights & R_SPAWN)		verbs += admin_verbs_spawn
+		if(rights & R_MENTOR)		verbs += mentor_verbs_default
 
 		for(var/path in holder.rank.adds)
 			verbs += path

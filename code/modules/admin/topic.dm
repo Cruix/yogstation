@@ -1614,8 +1614,8 @@
 		show_player_panel(M)
 
 	else if(href_list["adminticketview"])
-		for(var/i = tickets_list.len, i >= 1, i--)
-			var/datum/admin_ticket/T = tickets_list[i]
+		for(var/i = admin_tickets_list.len, i >= 1, i--)
+			var/datum/admin_ticket/T = admin_tickets_list[i]
 			if(T.ticket_id == text2num(href_list["adminticketview"]))
 				T.view_log()
 				return

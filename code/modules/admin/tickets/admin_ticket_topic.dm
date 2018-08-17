@@ -17,7 +17,9 @@
 		if(!C.holder && !compare_ckey(M, T.owner_ckey))
 			message_admins("EXPLOIT \[admin_ticket\]: [M] attempted to view a ticket, they are not an admin or the owner of the ticket.")
 			return
-
+		if(T.is_mentor_ticket & C.holder.rank.rights == R_MENTOR)
+			usr << "This is an admin ticket, you do not have permission to view it."
+			return
 		T.view_log(C.mob)
 	else if(href_list["action"] == "reply_to_ticket")
 		if(C.prefs.muted & MUTE_ADMINHELP)
@@ -71,6 +73,18 @@
 			return
 
 		T.toggle_monitor()
+	else if(href_list["action"] == "mentor_to_admin_ticket")
+		var/datum/admin_ticket/T = locate(href_list["ticket"])
+		if(!T.is_mentor_ticket)
+			usr << "That ticket is already an admin ticket."
+			return
+		T.toggle_mentor_ticket()
+	else if(href_list["action"] == "admin_to_mentor_ticket")
+		var/datum/admin_ticket/T = locate(href_list["ticket"])
+		if(T.is_mentor_ticket)
+			usr << "That ticket is already a mentor ticket."
+			return
+		T.toggle_mentor_ticket()
 	else if(href_list["action"] == "administer_admin_ticket")
 		var/datum/admin_ticket/T = locate(href_list["ticket"])
 		if(!istype(T, /datum/admin_ticket))
@@ -92,7 +106,7 @@
 		world << output("[usr != null ? "[key_name(usr, 1)]" : "Unassigned"]", "ViewTicketLog[T.ticket_id].browser:handling_user")
 
 		if(href_list["reloadlist"])
-			C.view_tickets()
+			C.view_tickets_main(href_list["flag"])
 	else if(href_list["action"] == "resolve_admin_ticket")
 		var/datum/admin_ticket/T = locate(href_list["ticket"])
 		if(!istype(T, /datum/admin_ticket))
@@ -109,8 +123,6 @@
 		else if(compare_ckey(M, T.owner_ckey) && T.resolved)
 			C << "<span class='ticket-status'>-- Your ticket is already closed. You cannot reopen it.</span>"
 
-		if(href_list["reloadlist"])
-			C.view_tickets()
 	else if(href_list["action"] == "refresh_admin_ticket")
 		var/datum/admin_ticket/T = locate(href_list["ticket"])
 		if(!istype(T, /datum/admin_ticket))
@@ -145,12 +157,13 @@
 			sleep(2)
 			C.jumptomob(N)
 
+	if(href_list["reloadlist"])
+		C.view_tickets_main(href_list["flag"])
+
 /client/Topic(href, href_list, hsrc)
 	..()
 
 	if(href_list["action"] == "refresh_admin_ticket_list")
 		var/client/C = usr.client
 		var/flag = href_list["flag"]
-		if(!flag)
-			flag = TICKET_FLAG_LIST_ALL
 		C.view_tickets_main(flag)

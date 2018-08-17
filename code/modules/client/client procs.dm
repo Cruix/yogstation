@@ -44,7 +44,7 @@
 
 			if(holder && T.resolved)
 				var/found_ticket = 0
-				for(var/datum/admin_ticket/T2 in tickets_list)
+				for(var/datum/admin_ticket/T2 in admin_tickets_list)
 					if(!T.resolved && compare_ckey(T.owner_ckey, T2.owner_ckey))
 						found_ticket = 1
 
@@ -183,10 +183,14 @@ var/next_external_rsc = 0
 		return null
 
 	spawn(30)
+<<<<<<< Updated upstream
 		antag_token_reload_from_db(src)
 		credits_reload_from_db(src)
 
 		for(var/datum/admin_ticket/T in tickets_list)
+=======
+		for(var/datum/admin_ticket/T in admin_tickets_list|mentor_tickets_list)
+>>>>>>> Stashed changes
 			if(compare_ckey(T.owner_ckey, src) && !T.resolved)
 				T.owner = src
 				T.add_log(new /datum/ticket_log(T, src, "¤ Connected ¤", 1), src)
@@ -208,7 +212,10 @@ var/next_external_rsc = 0
 	//Admin Authorisation
 	holder = admin_datums[ckey]
 	if(holder)
-		admins += src
+		if(holder.rank.rights == R_MENTOR)//if they are only a mentor, they don't get into the admin list.
+			mentors += src
+		else
+			admins += src
 		holder.owner = src
 
 	//Need to load before we load preferences for correctly removing Ultra if user no longer whitelisted
@@ -308,7 +315,7 @@ var/next_external_rsc = 0
 	//DISCONNECT//
 	//////////////
 /client/Del()
-	for(var/datum/admin_ticket/T in tickets_list)
+	for(var/datum/admin_ticket/T in admin_tickets_list|mentor_tickets_list)
 		if(compare_ckey(T.owner_ckey, usr) && !T.resolved)
 			T.add_log(new /datum/ticket_log(T, src, "¤ Disconnected ¤", 1))
 
@@ -316,6 +323,7 @@ var/next_external_rsc = 0
 		ticker.next_check_admin = 1
 		holder.owner = null
 		admins -= src
+		mentors -= src
 	sync_logout_with_db(connection_number)
 	directory -= ckey
 	clients -= src

@@ -699,12 +699,31 @@ var/list/slot_equipment_priority = list( \
 		stat(null, "Server Time: [time2text(world.realtime, "YYYY-MM-DD hh:mm")]")
 		stat(null, "Round: [yog_round_number]")
 
+<<<<<<< Updated upstream
 		if(client && (client.holder || ticket_counter_visible_to_everyone))
+=======
+		if(client && client.holder)
+			if(client.holder.rank.rights != R_MENTOR)//if they are only a mentor, they don't get to see the admin ticket stuff.
+				var/tickets_unclaimed = 0
+				var/tickets_unresolved = 0
+				var/tickets_resolved = 0
+				var/tickets_total = 0
+				for(var/datum/admin_ticket/T in admin_tickets_list)
+					tickets_total++
+					if(T.resolved)
+						tickets_resolved++
+					else if(!T.handling_admin)
+						tickets_unclaimed++
+					else
+						tickets_unresolved++
+				stat(null,"Admin Tickets([tickets_total]):\t[tickets_unclaimed > 0 ? "Unclaimed([tickets_unclaimed])\t" : ""][tickets_resolved > 0 ? "Resolved([tickets_resolved])\t" : ""][tickets_unresolved > 0 ? "Unresolved([tickets_unresolved])\t" : ""]")
+
+>>>>>>> Stashed changes
 			var/tickets_unclaimed = 0
 			var/tickets_unresolved = 0
 			var/tickets_resolved = 0
 			var/tickets_total = 0
-			for(var/datum/admin_ticket/T in tickets_list)
+			for(var/datum/admin_ticket/T in mentor_tickets_list)
 				tickets_total++
 				if(T.resolved)
 					tickets_resolved++
@@ -712,8 +731,7 @@ var/list/slot_equipment_priority = list( \
 					tickets_unclaimed++
 				else
 					tickets_unresolved++
-			stat(null,"Tickets([tickets_total]):\t[tickets_unclaimed > 0 ? "Unclaimed([tickets_unclaimed])\t" : ""][tickets_resolved > 0 ? "Resolved([tickets_resolved])\t" : ""][tickets_unresolved > 0 ? "Unresolved([tickets_unresolved])\t" : ""]")
-
+			stat(null,"Mentor Tickets([tickets_total]):\t[tickets_unclaimed > 0 ? "Unclaimed([tickets_unclaimed])\t" : ""][tickets_resolved > 0 ? "Resolved([tickets_resolved])\t" : ""][tickets_unresolved > 0 ? "Unresolved([tickets_unresolved])\t" : ""]")
 
 		var/ETA
 		switch(SSshuttle.emergency.mode)

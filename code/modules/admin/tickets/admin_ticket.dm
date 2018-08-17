@@ -1,7 +1,13 @@
 
+<<<<<<< Updated upstream
 var/list/tickets_list = list()
 var/ticket_count = 0
 var/ticket_counter_visible_to_everyone = 0
+=======
+/var/list/admin_tickets_list = list()
+/var/list/mentor_tickets_list = list()
+/var/ticket_count = 0;
+>>>>>>> Stashed changes
 
 /datum/ticket_log
 	var/datum/admin_ticket/parent
@@ -57,13 +63,15 @@ var/ticket_counter_visible_to_everyone = 0
 	var/error = 0
 	//var/log_file
 	var/admin_started_ticket = 0
+	var/is_mentor_ticket = 0
 
-/datum/admin_ticket/New(nowner, ntitle, ntarget)
+/datum/admin_ticket/New(nowner, ntitle, ntarget, is_a_mentor_ticket = 0)
 	if(compare_ckey(nowner, ntarget))
 		usr << "<span class='ticket-status'>You cannot make a ticket for yourself</span>"
 		error = 1
 		return
 
+	is_mentor_ticket = is_a_mentor_ticket
 	owner = get_client(nowner)
 	owner_ckey = get_ckey(owner)
 
@@ -73,7 +81,7 @@ var/ticket_counter_visible_to_everyone = 0
 		owner_ckey = get_ckey(ntarget)
 		admin_started_ticket = 1
 
-	for(var/datum/admin_ticket/T in tickets_list)
+	for(var/datum/admin_ticket/T in admin_tickets_list|mentor_tickets_list )
 		if(!T.resolved && (compare_ckey(owner_ckey, T.owner_ckey)))
 			error = 1
 			usr << "<span class='ticket-status'>Ticket not created. This user already has a ticket. You can view it here: [T.get_view_link(usr)]</span>"
@@ -104,7 +112,7 @@ var/ticket_counter_visible_to_everyone = 0
 			handling_admin << 'sound/effects/adminhelp.ogg'
 	else
 		log += new /datum/ticket_log(src, usr, "Ticket created by <b>[owner]</b>", 0)
-		owner << "<span class='ticket-status'>Ticket created for Admins: \"[title]\"</span>"
+		owner << "<span class='ticket-status'>Ticket created for [is_mentor_ticket ? "Mentors" : "Admins"]: \"[title]\"</span>"
 		if(has_pref(owner, SOUND_ADMINHELP))
 			owner << 'sound/effects/adminhelp.ogg'
 

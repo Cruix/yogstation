@@ -127,7 +127,10 @@
 	return "<a href='?src=\ref[src];user=\ref[user];action=view_admin_ticket;ticket=\ref[src]'>Ticket #[src.ticket_id]</a>"
 
 /datum/admin_ticket/proc/is_monitor(var/client/C)
-	return (C in monitors) ? 1 : 0
+	for(var/M in monitors)
+		if(compare_ckey(M, usr))
+			return 1
+	return 0
 
 /datum/admin_ticket/proc/check_unclaimed()
 	spawn(600)
@@ -166,12 +169,28 @@
 
 	return monitoring
 
+/datum/admin_ticket/proc/toggle_mentor_ticket()
+	is_mentor_ticket = !is_mentor_ticket
+	var/log = "[usr.client] changed ticket #[ticket_id] to \a [is_mentor_ticket ? "mentor" : "admin" ] ticket."
+	var/msg = "<span class='ticket-status'>[log]</span>"
+	log_admin(log)
+	if(owner && owner.mob)
+		owner.mob << "Your ticket was changed to \a [is_mentor_ticket ? "mentor" : "admin"] ticket"
+	admins << msg
+	mentors << msg
+	if(is_mentor_ticket)
+		admin_tickets_list -= src
+		mentor_tickets_list += src
+	else
+		mentor_tickets_list -= src
+		admin_tickets_list += src
+
 /datum/admin_ticket/proc/toggle_resolved()
 	resolved = !resolved
 
 	//var/totalCount = 0
 	var/unresolvedCount = 0
-	for(var/datum/admin_ticket/T in tickets_list)
+	for(var/datum/admin_ticket/T in admin_tickets_list)
 		//totalCount++
 		if(!T.resolved)
 			unresolvedCount++
@@ -255,7 +274,7 @@
 					<a href='?_src_=holder;subtlemessage=\ref[owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-mail-closed' /> SM</a>
 					<a href='?_src_=holder;adminplayerobservefollow=\ref[owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-arrowthick-1-e' /> FLW</a>
 					<a href='?_src_=holder;secretsadmin=check_antagonist'><img border='0' width='16' height='16' class='uiIcon16 icon-clipboard' /> CA</a>
-					<a href='?src=\ref[src];user=\ref[usr];action=monitor_admin_ticket;ticket=\ref[src]' class='monitor-button'><img border='0' width='16' height='16' class='uiIcon16 icon-pin-s' /> <span>[!is_monitor(usr.client) ? "Un" : ""]Monitor</span></a>
+					<a href='?src=\ref[src];user=\ref[usr];action=monitor_admin_ticket;ticket=\ref[src]' class='monitor-button'><img border='0' width='16' height='16' class='uiIcon16 icon-pin-s' /> <span>[is_monitor(usr.client) ? "Un" : ""]Monitor</span></a>
 					<a href='?src=\ref[src];user=\ref[usr];action=resolve_admin_ticket;ticket=\ref[src]' class='resolve-button'><img border='0' width='16' height='16' class='uiIcon16 icon-check' /> <span>[resolved ? "Un" : ""]Resolve</span></a>
 					<a href='?src=\ref[src];user=\ref[usr];action=administer_admin_ticket;ticket=\ref[src]' class='admin-button'><img border='0' width='16' height='16' class='uiIcon16 icon-flag' /> <span>Administer</span></a>
 				</p>"}

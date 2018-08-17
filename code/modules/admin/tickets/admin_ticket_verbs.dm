@@ -15,7 +15,7 @@
 	ticket_title = sanitize(copytext(ticket_title,1,MAX_MESSAGE_LEN))
 
 	var/datum/admin_ticket/found_ticket = null
-	for(var/datum/admin_ticket/T in tickets_list)
+	for(var/datum/admin_ticket/T in admin_tickets_list)
 		if(compare_ckey(T.owner_ckey, src) && !T.resolved)
 			found_ticket = T
 
@@ -23,7 +23,7 @@
 		var/datum/admin_ticket/T = new /datum/admin_ticket(src, ticket_title)
 
 		if(!T.error)
-			tickets_list.Add(T)
+			admin_tickets_list.Add(T)
 		else
 			T = null
 	else
@@ -32,34 +32,88 @@
 			found_ticket.owner << output("[gameTimestamp()] - <b>[key_name(found_ticket.owner, 1)]</b> - [ticket_title]", "ViewTicketLog[found_ticket.ticket_id].browser:add_message")
 		found_ticket.add_log(ticket_title)
 
-/client/verb/view_my_ticket()
+/client/verb/mentor_ticket(ticket_title as text)
+	set category = "Admin"
+	set name = "Mentorhelp"
+
+	if(prefs.muted & MUTE_ADMINHELP)
+		src << "<font color='red'>Error: Admin-PM: You are unable to use admin PM-s (muted).</font>"
+		return
+
+	if(!ticket_title)
+		usr << "<span class='ticket-status'>You did not supply a message for your ticket. Ignoring your request.</span>"
+		return
+
+	ticket_title = replacetext(ticket_title, "'", "\'")
+	ticket_title = sanitize(copytext(ticket_title,1,MAX_MESSAGE_LEN))
+
+	var/datum/admin_ticket/found_ticket = null
+	for(var/datum/admin_ticket/T in mentor_tickets_list)
+		if(compare_ckey(T.owner_ckey, src) && !T.resolved)
+			found_ticket = T
+
+	if(!found_ticket)
+		var/datum/admin_ticket/T = new /datum/admin_ticket(src, ticket_title, null, 1)
+
+		if(!T.error)
+			mentor_tickets_list.Add(T)
+		else
+			T = null
+	else
+		found_ticket.owner = src
+		if(!compare_ckey(src, found_ticket.owner))
+			found_ticket.owner << output("[gameTimestamp()] - <b>[key_name(found_ticket.owner, 1)]</b> - [ticket_title]", "ViewTicketLog[found_ticket.ticket_id].browser:add_message")
+		found_ticket.add_log(ticket_title)
+
+/client/verb/view_my_admin_ticket()
 	set category = "Admin"
 	set name = "View My Ticket"
 	// Firstly, check if we are the owner of a ticket. This should be our first priority.
-	for(var/datum/admin_ticket/T in tickets_list)
+	for(var/datum/admin_ticket/T in admin_tickets_list | mentor_tickets_list)
 		if(compare_ckey(T.owner_ckey, usr) && !T.resolved)
 			T.view_log()
 			return
 	// If we reach here, perhaps we have a ticket to handle. That should be shown.
-	for(var/datum/admin_ticket/T in tickets_list)
+	for(var/datum/admin_ticket/T in admin_tickets_list)
 		if(compare_ckey(T.handling_admin, usr) && !T.resolved)
 			T.view_log()
 			return
 
 	usr << "<span class='ticket-status'>Oops! You do not appear to have a ticket!</span>"
 
-/client/proc/view_tickets()
+/client/proc/view_admin_tickets()
 	set name = "Adminlisttickets"
 	set category = "Admin"
 
-	view_tickets_main(TICKET_FLAG_LIST_ALL)
+	view_tickets_main(TICKET_FLAG_LIST_ALL | TICKET_FLAG_LIST_ADMIN)
+
+/client/proc/view_mentor_tickets()
+	set name = "List Mentor Tickets"
+	set category = "Admin"
+
+	view_tickets_main(TICKET_FLAG_LIST_ALL | TICKET_FLAG_LIST_MENTOR)
+
+/client/proc/view_all_tickets()
+	set name = "List All Tickets"
+	set category = "Admin"
+
+	view_tickets_main(TICKET_FLAG_LIST_ALL | TICKET_FLAG_LIST_ADMIN | TICKET_FLAG_LIST_MENTOR)
 
 /client/proc/view_tickets_main(var/flag)
 	flag = text2num(flag)
 	if(!flag)
 		flag = TICKET_FLAG_LIST_ALL
 
+	if(!(flag & TICKET_FLAG_LIST_MINE) && !(flag & TICKET_FLAG_LIST_UNCLAIMED))
+		flag |= TICKET_FLAG_LIST_ALL
+
 	var/content = ""
+
+	var/list/tickets_list = list()
+	if(flag & TICKET_FLAG_LIST_ADMIN)
+		tickets_list |= admin_tickets_list
+	if(flag & TICKET_FLAG_LIST_MENTOR)
+		tickets_list |= mentor_tickets_list
 
 	if(holder)
 		content += {"<p class='info-bar'>
@@ -72,15 +126,28 @@
 
 			<a href='?user=\ref[src];action=refresh_admin_ticket_list;flag=
 				[flag & TICKET_FLAG_LIST_UNCLAIMED ? "[(flag & ~TICKET_FLAG_LIST_UNCLAIMED) & ~TICKET_FLAG_LIST_ALL]" : "[(flag | TICKET_FLAG_LIST_UNCLAIMED) & ~TICKET_FLAG_LIST_ALL]"]
-				'>[flag & TICKET_FLAG_LIST_UNCLAIMED ? "¤ " : ""]Unclaimed</a>
+				'>[flag & TICKET_FLAG_LIST_UNCLAIMED ? "¤ " : ""]Unclaimed</a>"}
+		if(holder.rank.rights == R_MENTOR)
+			content += "<b>Mentor Tickets Only</b>"
+		else
+			content += {"
+				<a href='?user=\ref[src];action=refresh_admin_ticket_list;flag=
+					[flag & TICKET_FLAG_LIST_ADMIN ? "[flag & ~TICKET_FLAG_LIST_ADMIN]" : "[flag | TICKET_FLAG_LIST_ADMIN]"]
+					'>[flag & TICKET_FLAG_LIST_ADMIN ? "¤ " : ""]Admin Tickets</a>
 
-		</p>"}
+				<a href='?user=\ref[src];action=refresh_admin_ticket_list;flag=
+					[flag & TICKET_FLAG_LIST_MENTOR ? "[flag & ~TICKET_FLAG_LIST_MENTOR]" : "[flag | TICKET_FLAG_LIST_MENTOR]"]
+					'>[flag & TICKET_FLAG_LIST_MENTOR ? "¤ " : ""]Mentor Tickets</a>"}
+
+		content += "</p>"
 
 		content += {"<p class='info-bar'>
 			Filtering:<b>
 			[(flag & TICKET_FLAG_LIST_ALL) ? " All" : ""]
 			[(flag & TICKET_FLAG_LIST_MINE) ? " Mine" : ""]
 			[(flag & TICKET_FLAG_LIST_UNCLAIMED) ? " Unclaimed" : ""]
+			[(flag & TICKET_FLAG_LIST_ADMIN) ? " Admin" : ""]
+			[(flag & TICKET_FLAG_LIST_MENTOR) ? " Mentor" : ""]
 		</b></p>"}
 
 		var/list/resolved = new /list()
@@ -120,77 +187,12 @@
 		if(unresolved.len > 0)
 			content += "<p class='info-bar unresolved emboldened large-font'>Unresolved Tickets ([unresolved.len]/[tickets_list.len]):</p>"
 			for(var/datum/admin_ticket/T in unresolved)
-				if(!T.owner)
-					content += {"<p class='ticket-bar'>
-						<span class='ticket-number'>#[T.ticket_id]</span>
-						<b>[T.handling_admin ? "" : "<span class='unclaimed'>Unclaimed</span>!"] [T.title]</b><br />
-						<b>Owner:</b> <b>[T.owner_ckey] (DC)</b>
-						<a href='?src=\ref[T];user=\ref[src];action=view_admin_ticket;ticket=\ref[T]'><img border='0' width='16' height='16' class='uiIcon16 icon-search' /> View</a>
-						<a href='?src=\ref[T];user=\ref[src];action=monitor_admin_ticket;ticket=\ref[T];reloadlist=1' class='monitor-button'><img border='0' width='16' height='16' class='uiIcon16 icon-pin-s' /> <span>[!T.is_monitor(usr.client) ? "Un" : ""]Monitor</span></a>
-						<a href='?src=\ref[T];user=\ref[src];action=resolve_admin_ticket;ticket=\ref[T];reloadlist=1' class='resolve-button'><img border='0' width='16' height='16' class='uiIcon16 icon-check' /> <span>[T.resolved ? "Un" : ""]Resolve</span></a>
-						</p>"}
-				else
-					var/ai_found = (T.owner && isAI(get_ckey(T.owner)))
-					content += {"<p class='ticket-bar'>
-						<span class='ticket-number'>#[T.ticket_id]</span>
-						<b>[T.handling_admin ? "" : "<span class='unclaimed'>Unclaimed</span>"] [T.title]</b><br />
-						<b>Owner:</b> <b>[key_name(T.owner, 1)]</b><br />
-						[T.handling_admin ? " <b>Admin:</b> [T.handling_admin]<br />" : ""]
-						<a href='?src=\ref[T];user=\ref[src];action=view_admin_ticket;ticket=\ref[T]'><img border='0' width='16' height='16' class='uiIcon16 icon-search' /> View</a>
-						"}
-					if(T.owner.mob)
-						content += {"
-							<a href='?_src_=holder;adminmoreinfo=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-search' /> ?</a>
-							<a href='?_src_=holder;adminplayeropts=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-clipboard' /> PP</a>
-							<a href='?_src_=vars;Vars=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-clipboard' /> VV</a>
-							<a href='?_src_=holder;subtlemessage=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-mail-closed' /> SM</a>
-							<a href='?_src_=holder;adminplayerobservefollow=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-arrowthick-1-e' /> FLW</a>
-							<a href='?_src_=holder;secretsadmin=check_antagonist'><img border='0' width='16' height='16' class='uiIcon16 icon-clipboard' /> CA</a>
-							[ai_found ? " <a href='?_src_=holder;adminchecklaws=\ref[T.owner.mob]'><img width='16' height='16' class='uiIcon16 icon-clipboard' /> CL</a>" : ""]
-							"}
-					content += {"
-						<a href='?src=\ref[T];user=\ref[src];action=monitor_admin_ticket;ticket=\ref[T];reloadlist=1' class='monitor-button'><img border='0' width='16' height='16' class='uiIcon16 icon-pin-s' /> <span>[!T.is_monitor(usr.client) ? "Un" : ""]Monitor</span></a>
-						<a href='?src=\ref[T];user=\ref[src];action=resolve_admin_ticket;ticket=\ref[T];reloadlist=1' class='resolve-button'><img border='0' width='16' height='16' class='uiIcon16 icon-check' /> <span>[T.resolved ? "Un" : ""]Resolve</span></a>
-						</p>"}
+				content += render_ticket_html(T, flag)
 
 		if(resolved.len > 0)
 			content += "<p class='info-bar resolved emboldened large-font'>Resolved Tickets ([resolved.len]/[tickets_list.len]):</p>"
 			for(var/datum/admin_ticket/T in resolved)
-				/*if(!T.owner)
-					continue*/
-
-				if(!T.owner)
-					content += {"<p class='ticket-bar'>
-						<span class='ticket-number'>#[T.ticket_id]</span>
-						<b>[T.title]</b><br />
-						<b>Owner:</b> <b>[T.owner_ckey] (DC)</b>
-						<a href='?src=\ref[T];user=\ref[src];action=view_admin_ticket;ticket=\ref[T]'><img border='0' width='16' height='16' class='uiIcon16 icon-search' /> View</a>
-						<a href='?src=\ref[T];user=\ref[src];action=monitor_admin_ticket;ticket=\ref[T];reloadlist=1' class='monitor-button'><img border='0' width='16' height='16' class='uiIcon16 icon-pin-s' /> <span>[!T.is_monitor(usr.client) ? "Un" : ""]Monitor</span></a>
-						<a href='?src=\ref[T];user=\ref[src];action=resolve_admin_ticket;ticket=\ref[T];reloadlist=1' class='resolve-button'><img border='0' width='16' height='16' class='uiIcon16 icon-check' /> <span>[T.resolved ? "Un" : ""]Resolve</span></a>
-						</p>"}
-				else
-					var/ai_found = (T.owner && isAI(get_ckey(T.owner)))
-					content += {"<p class='ticket-bar'>
-						<span class='ticket-number'>#[T.ticket_id]</span>
-						<b>[T.title]</b><br />
-						<b>Owner:</b> <b>[key_name(T.owner, 1)]</b><br />
-						[T.handling_admin ? " <b>Admin:</b> [T.handling_admin]<br />" : ""]
-						<a href='?src=\ref[T];user=\ref[src];action=view_admin_ticket;ticket=\ref[T]'><img border='0' width='16' height='16' class='uiIcon16 icon-search' /> View</a>
-						"}
-					if(T.owner.mob)
-						content += {"
-							<a href='?_src_=holder;adminmoreinfo=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-search' /> ?</a>
-							<a href='?_src_=holder;adminplayeropts=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-clipboard' /> PP</a>
-							<a href='?_src_=vars;Vars=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-clipboard' /> VV</a>
-							<a href='?_src_=holder;subtlemessage=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-mail-closed' /> SM</a>
-							<a href='?_src_=holder;adminplayerobservefollow=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-arrowthick-1-e' /> FLW</a>
-							<a href='?_src_=holder;secretsadmin=check_antagonist'><img border='0' width='16' height='16' class='uiIcon16 icon-clipboard' /> CA</a>
-							[ai_found ? " <a href='?_src_=holder;adminchecklaws=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-clipboard' /> CL</a>" : ""]
-								"}
-					content += {"
-						<a href='?src=\ref[T];user=\ref[src];action=monitor_admin_ticket;ticket=\ref[T];reloadlist=1' class='monitor-button'><img border='0' width='16' height='16' class='uiIcon16 icon-pin-s' /> <span>[!T.is_monitor(usr.client) ? "Un" : ""]Monitor</span></a>
-						<a href='?src=\ref[T];user=\ref[src];action=resolve_admin_ticket;ticket=\ref[T];reloadlist=1' class='resolve-button'><img border='0' width='16' height='16' class='uiIcon16 icon-check' /> <span>[T.resolved ? "Un" : ""]Resolve</span></a>
-						</p>"}
+				content += render_ticket_html(T, flag)
 	else
 		content += "<p class='info-bar'><a href='?user=\ref[src];action=refresh_admin_ticket_list;flag=[flag]'>Refresh List</a></p>"
 
@@ -209,6 +211,40 @@
 
 	usr << browse(null, "window=ViewTickets")
 	usr << browse(html, "window=ViewTickets")
+
+/client/proc/render_ticket_html(var/datum/admin_ticket/T, var/flag = 0 )//we were doing the exact same thing twice so I put it in a proc
+	var/content = ""
+	if(!T.owner)
+		content += {"<p class='ticket-bar'>
+			<span class='ticket-number'>#[T.ticket_id]</span>
+			<b>[T.handling_admin ? "" : "<span class='unclaimed'>Unclaimed</span>!"] [T.title]</b><br />
+			<b>[T.is_mentor_ticket ? "\[mentor\]" : "\[admin\]" ] Owner:</b> <b>[T.owner_ckey] (DC)</b>
+			<a href='?src=\ref[T];user=\ref[src];action=view_admin_ticket;ticket=\ref[T]'><img border='0' width='16' height='16' class='uiIcon16 icon-search' /> View</a>"}
+	else
+		var/ai_found = (T.owner && isAI(get_ckey(T.owner)))
+		content += {"<p class='ticket-bar'>
+			<span class='ticket-number'>#[T.ticket_id]</span>
+			<b>[T.handling_admin ? "" : "<span class='unclaimed'>Unclaimed</span>"] [T.title]</b><br />
+			<b>[T.is_mentor_ticket ? "\[mentor\]" : "\[admin\]" ] Owner:</b> <b>Owner:</b> <b>[key_name(T.owner, 1)]</b><br />
+			[T.handling_admin ? " <b>Admin:</b> [T.handling_admin]<br />" : ""]
+			<a href='?src=\ref[T];user=\ref[src];action=view_admin_ticket;ticket=\ref[T]'><img border='0' width='16' height='16' class='uiIcon16 icon-search' /> View</a>
+			"}
+		if(T.owner.mob && check_rights(R_ADMIN) )
+			content += {"
+				<a href='?_src_=holder;adminmoreinfo=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-search' /> ?</a>
+				<a href='?_src_=holder;adminplayeropts=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-clipboard' /> PP</a>
+				<a href='?_src_=vars;Vars=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-clipboard' /> VV</a>
+				<a href='?_src_=holder;subtlemessage=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-mail-closed' /> SM</a>
+				<a href='?_src_=holder;adminplayerobservefollow=\ref[T.owner.mob]'><img border='0' width='16' height='16' class='uiIcon16 icon-arrowthick-1-e' /> FLW</a>
+				<a href='?_src_=holder;secretsadmin=check_antagonist'><img border='0' width='16' height='16' class='uiIcon16 icon-clipboard' /> CA</a>
+				[ai_found ? " <a href='?_src_=holder;adminchecklaws=\ref[T.owner.mob]'><img width='16' height='16' class='uiIcon16 icon-clipboard' /> CL</a>" : ""]
+				"}
+	content += {"
+		<a href='?src=\ref[T];user=\ref[src];action=monitor_admin_ticket;ticket=\ref[T];reloadlist=1;flag=[flag]' class='monitor-button'><img border='0' width='16' height='16' class='uiIcon16 icon-pin-s' /> <span>[T.is_monitor(usr.client) ? "Un" : ""]Monitor</span></a>
+		<a href='?src=\ref[T];user=\ref[src];action=[T.is_mentor_ticket ? "mentor_to_admin_ticket" : "admin_to_mentor_ticket"];ticket=\ref[T];reloadlist=1;flag=[flag]' class='monitor-button'><img border='0' width='16' height='16' class='uiIcon16 icon-arrowthick-1-e' /> <span>[T.is_mentor_ticket ? "Make Admin Ticket" : "Make Mentor Ticket"]</span></a>\
+		<a href='?src=\ref[T];user=\ref[src];action=resolve_admin_ticket;ticket=\ref[T];reloadlist=1;flag=[flag]' class='resolve-button'><img border='0' width='16' height='16' class='uiIcon16 icon-check' /> <span>[T.resolved ? "Un" : ""]Resolve</span></a>
+		</p>"}
+	return content
 
 /client/verb/afk()
 	set name = "AFK"

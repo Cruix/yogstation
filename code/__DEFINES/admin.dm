@@ -34,10 +34,19 @@
 #define R_SOUNDS		2048
 #define R_SPAWN			4096
 #define R_NOJOIN		8192
+<<<<<<< Updated upstream
 #define R_TICKET		16384
 
+=======
+#define R_MENTOR		16384
+
+#define R_EVERYTHING	57343 //65535-R_NOJOIN
+
+>>>>>>> Stashed changes
 #define R_MAXPERMISSION 32768 //This holds the maximum value for a permission. It is used in iteration, so keep it updated.
 
 #define TICKET_FLAG_LIST_ALL		1
 #define TICKET_FLAG_LIST_MINE		2
 #define TICKET_FLAG_LIST_UNCLAIMED	4
+#define TICKET_FLAG_LIST_ADMIN		8
+#define TICKET_FLAG_LIST_MENTOR		16

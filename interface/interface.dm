@@ -65,9 +65,12 @@
 	set desc = "Show list of tickets"
 	set hidden = 1
 	if(holder)
-		view_tickets()
+		if(holder.rank.rights == R_MENTOR)
+			view_tickets_main(TICKET_FLAG_LIST_ALL | TICKET_FLAG_LIST_MENTOR)
+		else
+			view_tickets_main(TICKET_FLAG_LIST_ALL | TICKET_FLAG_LIST_ADMIN | TICKET_FLAG_LIST_MENTOR)
 	else
-		for(var/datum/admin_ticket/T in tickets_list)
+		for(var/datum/admin_ticket/T in admin_tickets_list|mentor_tickets_list)
 			if(compare_ckey(T.owner_ckey, usr) && !T.resolved)
 				T.view_log()
 				return

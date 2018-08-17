@@ -34,11 +34,15 @@ var/list/admin_ranks = list()								//list of all admin_rank datums
 		if("stealth")					flag = R_STEALTH
 		if("rejuv","rejuvinate")		flag = R_REJUVINATE
 		if("varedit")					flag = R_VAREDIT
-		if("everything","host","all")	flag = 57343 //65535-R_NOJOIN
+		if("everything","host","all")	flag = R_EVERYTHING
 		if("sound","sounds")			flag = R_SOUNDS
 		if("spawn","create")			flag = R_SPAWN
 		if("nojoin")					flag = R_NOJOIN
+<<<<<<< Updated upstream
 		if("ticket")					flag = R_TICKET
+=======
+		if("mentor")					flag = R_MENTOR
+>>>>>>> Stashed changes
 		if("@","prev")					flag = previous_rights
 	return flag
 
